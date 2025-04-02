@@ -5,46 +5,115 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
 
     <changeSet id="1" author="wolf606" runOnChange="false">
-        <createTable tableName="users">
+        <createTable tableName="persona">
             <column name="id" type="bigint" autoIncrement="true">
                 <constraints primaryKey="true"/>
             </column>
-            <column name="name" type="varchar(100)">
+            <column name="nombre" type="varchar(100)">
                 <constraints nullable="false"/>
             </column>
-            <column name="email" type="varchar(100)">
-                <constraints unique="true" nullable="false"/>
-            </column>
-            <column name="password" type="varchar(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="role" type="varchar(50)">
+            <column name="edad" type="int">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
     <changeSet id="2" author="wolf606" runOnChange="false" runAlways="false">
-        <insert tableName="users">
-            <column name="name" value="Alice Johnson"/>
-            <column name="email" value="alice@example.com"/>
-            <column name="password" value="hashedpassword1"/>
-            <column name="role" value="ADMIN"/>
+        <insert tableName="persona">
+            <column name="nombre" value="Juan Pérez"/>
+            <column name="edad" value="30"/>
         </insert>
 
-        <insert tableName="users">
-            <column name="name" value="Bob Smith"/>
-            <column name="email" value="bob@example.com"/>
-            <column name="password" value="hashedpassword2"/>
-            <column name="role" value="USER"/>
+        <insert tableName="persona">
+            <column name="nombre" value="María López"/>
+            <column name="edad" value="25"/>
         </insert>
 
-        <insert tableName="users">
-            <column name="name" value="Charlie Brown"/>
-            <column name="email" value="charlie@example.com"/>
-            <column name="password" value="hashedpassword3"/>
-            <column name="role" value="USER"/>
+        <insert tableName="persona">
+            <column name="nombre" value="Carlos García"/>
+            <column name="edad" value="40"/>
         </insert>
+    </changeSet>
+
+    <!-- Create a table to track the changes -->
+    <changeSet id="3" author="wolf606" runOnChange="false">
+        <createTable tableName="persona_audit">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="persona_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="old_data" type="json">
+                <constraints nullable="true"/>
+            </column>
+            <column name="new_data" type="json">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Trigger to insert into persona_audit on insert of a persona -->
+    <changeSet id="4" author="wolf606" runOnChange="false">
+        <sql>
+            DROP TRIGGER IF EXISTS log_persona_insert;
+        </sql>
+        <sql dbms="mysql"
+             splitStatements="false"
+             stripComments="true">
+            CREATE TRIGGER log_persona_insert
+                AFTER INSERT ON persona
+                FOR EACH ROW
+            BEGIN
+                INSERT INTO persona_audit (persona_id, operation, operation_date, new_data)
+                VALUES (NEW.id, 'INSERT', CURRENT_TIMESTAMP(), JSON_OBJECT('id', NEW.id, 'nombre', NEW.nombre, 'edad', NEW.edad));
+            END;
+        </sql>
+    </changeSet>
+
+    <!-- Trigger to insert into persona_audit on update of a persona -->
+    <changeSet id="5" author="wolf606" runOnChange="false">
+        <sql>
+            DROP TRIGGER IF EXISTS log_persona_update;
+        </sql>
+        <sql dbms="mysql"
+             splitStatements="false"
+             stripComments="true">
+            CREATE TRIGGER log_persona_update
+                AFTER UPDATE ON persona
+                FOR EACH ROW
+            BEGIN
+                IF OLD.nombre &lt;&gt; NEW.nombre OR OLD.edad &lt;&gt; NEW.edad THEN
+                    INSERT INTO persona_audit (persona_id, operation, operation_date, old_data, new_data)
+                    VALUES (NEW.id, 'UPDATE', CURRENT_TIMESTAMP(),
+                    JSON_OBJECT('nombre', OLD.nombre, 'edad', OLD.edad),
+                    JSON_OBJECT('nombre', NEW.nombre, 'edad', NEW.edad));
+                END IF;
+            END;
+        </sql>
+    </changeSet>
+
+    <!-- Trigger to insert into persona_audit on delete of a persona -->
+    <changeSet id="6" author="wolf606" runOnChange="false">
+        <sql>DROP TRIGGER IF EXISTS log_persona_delete;</sql>
+        <sql dbms="mysql"
+             splitStatements="false"
+             stripComments="true">
+            CREATE TRIGGER log_persona_delete
+                AFTER DELETE ON persona
+                FOR EACH ROW
+            BEGIN
+                INSERT INTO persona_audit (persona_id, operation, operation_date, old_data)
+                VALUES (OLD.id, 'DELETE', CURRENT_TIMESTAMP(),
+                        JSON_OBJECT('id', OLD.id, 'nombre', OLD.nombre, 'edad', OLD.edad));
+            END;
+        </sql>
     </changeSet>
 
 </databaseChangeLog>
