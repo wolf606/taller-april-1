@@ -15,6 +15,7 @@ Before you begin, ensure you have the following installed on your system:
 - **compose.yaml**: Configures the services (Spring Boot app and MySQL database) using Docker Compose.
 - **src/**: Contains the source code of the Spring Boot application.
 - **pom.xml**: Maven configuration file for the Spring Boot application.
+- **Liquibase changelog**: Located in `src/main/resources/db/changelog/db.changelog-master.xml`, it defines the database schema and data changes.
 
 ## Environment Variables
 
@@ -42,6 +43,21 @@ The following environment variables are used in the `compose.yaml` file:
 3. Access the application:
    - The Spring Boot application will be available at [http://localhost:8080](http://localhost:8080).
    - The MySQL database will be accessible on port `3306`.
+
+## Database Management with Liquibase
+
+This project uses **Liquibase** to manage database schema changes. The main changelog file is located at:
+
+```
+src/main/resources/db/changelog/db.changelog-master.xml
+```
+
+### Key Features of the Changelog:
+- **Schema Creation**: Defines the `persona` table and an audit table `persona_audit`.
+- **Data Insertion**: Inserts initial data into the `persona` table.
+- **Triggers**: Includes triggers for auditing `INSERT`, `UPDATE`, and `DELETE` operations on the `persona` table.
+
+Liquibase automatically applies these changes when the application starts, based on the configuration in `application.properties`.
 
 ## Stopping the Containers
 
